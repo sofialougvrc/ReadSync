@@ -6,14 +6,18 @@ from functools import lru_cache
 import numpy as np
 
 from ..config import settings
-from ..db import all_rows, connect, log_activity, log_error, utcnow
+from ..db import all_rows, connect, log_activity, log_error, setting_value, utcnow
 from .embeddings import cosine, embed_text, embedding_from_json, jaccard, keyword_fingerprint
 
 
 @lru_cache(maxsize=1)
-def _ollama_available() -> bool:
+def _provider_available() -> bool:
+    provider = setting_value("llm_provider", settings.llm_provider).strip().lower()
+    if provider == "openrouter":
+        return bool(settings.openrouter_api_key.strip())
     try:
-        request = urllib.request.Request(f"{settings.ollama_endpoint.rstrip('/')}/api/tags", method="GET")
+        endpoint = setting_value("ollama_endpoint", settings.ollama_endpoint).rstrip("/")
+        request = urllib.request.Request(f"{endpoint}/api/tags", method="GET")
         with urllib.request.urlopen(request, timeout=0.75):
             return True
     except Exception:
@@ -81,7 +85,7 @@ def _heuristic_judge(concept: dict, chunk: dict, semantic: float, structural: fl
 
 
 def _judge_with_ollama(concept: dict, chunk: dict, semantic: float, structural: float, use_llm: bool = True) -> tuple[str, str, float]:
-    if not use_llm or not _ollama_available():
+    if not use_llm or not _provider_available():
         return _heuristic_judge(concept, chunk, semantic, structural)
     prompt = f"""
 Classify whether this code chunk already implements the research idea, partially overlaps with it, or does not implement it.
@@ -99,10 +103,16 @@ Code chunk:
 
 Similarity scores: semantic={semantic:.3f}, structural={structural:.3f}
 """
-    payload = {"model": settings.ollama_model, "prompt": prompt, "format": "json", "stream": False, "options": {"temperature": 0.0}}
+    payload = {
+        "model": setting_value("ollama_model", settings.ollama_model),
+        "prompt": prompt,
+        "format": "json",
+        "stream": False,
+        "options": {"temperature": 0.0},
+    }
     try:
         request = urllib.request.Request(
-            f"{settings.ollama_endpoint.rstrip('/')}/api/generate",
+            f"{setting_value('ollama_endpoint', settings.ollama_endpoint).rstrip('/')}/api/generate",
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -120,6 +130,71 @@ Similarity scores: semantic={semantic:.3f}, structural={structural:.3f}
         return classification, reason, float(data.get("confidence", semantic))
     except Exception:
         return _heuristic_judge(concept, chunk, semantic, structural)
+
+
+def _judge_with_openrouter(concept: dict, chunk: dict, semantic: float, structural: float, use_llm: bool = True) -> tuple[str, str, float]:
+    if not use_llm or not _provider_available() or not settings.openrouter_api_key.strip():
+        return _heuristic_judge(concept, chunk, semantic, structural)
+    prompt = f"""
+Classify whether this code chunk already implements the research idea, partially overlaps with it, or does not implement it.
+Return JSON: {{"classification":"already_implemented|partial|unapplied","reason":"specific paper-specific reason","confidence":0.0}}
+The reason must name the research idea, the code location, and the concrete code evidence or missing mechanism. Do not use a generic sentence.
+
+Research idea:
+{concept.get('name')} - {concept.get('description')}
+
+Code chunk:
+{chunk.get('module_path')}:{chunk.get('start_line')}-{chunk.get('end_line')}
+{chunk.get('signature')}
+{chunk.get('docstring')}
+{chunk.get('body', '')[:3500]}
+
+Similarity scores: semantic={semantic:.3f}, structural={structural:.3f}
+"""
+    payload = {
+        "model": setting_value("openrouter_model", settings.openrouter_model),
+        "messages": [
+            {"role": "system", "content": "You are ReadSync, a research-to-code reviewer. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.0,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.openrouter_api_key.strip()}",
+    }
+    if settings.openrouter_referer:
+        headers["HTTP-Referer"] = settings.openrouter_referer
+    if settings.openrouter_title:
+        headers["X-Title"] = settings.openrouter_title
+    try:
+        request = urllib.request.Request(
+            f"{setting_value('openrouter_base_url', settings.openrouter_base_url).rstrip('/')}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=18) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        text = (((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+        data = json.loads(text[text.find("{"):text.rfind("}") + 1])
+        classification = data.get("classification", "unapplied")
+        if classification not in ("already_implemented", "partial", "unapplied"):
+            classification = "unapplied"
+        reason = str(data.get("reason") or "").strip()
+        if len(reason.split()) < 12:
+            return _heuristic_judge(concept, chunk, semantic, structural)
+        return classification, reason, float(data.get("confidence", semantic))
+    except Exception as exc:
+        log_error("openrouter_match_judge", str(exc), {"concept": concept.get("name"), "chunk_id": chunk.get("id")})
+        return _heuristic_judge(concept, chunk, semantic, structural)
+
+
+def _judge_match(concept: dict, chunk: dict, semantic: float, structural: float, use_llm: bool = True) -> tuple[str, str, float]:
+    provider = setting_value("llm_provider", settings.llm_provider).strip().lower()
+    if provider == "openrouter":
+        return _judge_with_openrouter(concept, chunk, semantic, structural, use_llm=use_llm)
+    return _judge_with_ollama(concept, chunk, semantic, structural, use_llm=use_llm)
 
 
 def run_matching(paper_id: int | None = None, top_k: int = 8, per_repo_k: int = 3) -> dict:
@@ -174,7 +249,7 @@ def run_matching(paper_id: int | None = None, top_k: int = 8, per_repo_k: int = 
                 continue
             seen.add(key)
             use_llm = rank < 2 and (semantic >= 0.22 or structural >= 0.08)
-            classification, reason, confidence = _judge_with_ollama(idea, chunk, semantic, structural, use_llm=use_llm)
+            classification, reason, confidence = _judge_match(idea, chunk, semantic, structural, use_llm=use_llm)
             pending_rows.append((
                 idea["paper_id"],
                 idea["id"] if idea["source_kind"] == "concept" else None,

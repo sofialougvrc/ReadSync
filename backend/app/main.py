@@ -7,18 +7,19 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .db import all_rows, connect, dumps, init_db, loads, log_activity, log_error, one, utcnow
+from .db import all_rows, connect, dumps, init_db, loads, log_activity, log_error, one, setting_value, utcnow
 from .schemas import BibtexIngestRequest, MatchReviewRequest, NoteRequest, RepositoryRequest, SettingsRequest, UrlIngestRequest
 from .services.code_indexer import add_repository, add_repository_from_zip, index_repository
 from .services.extraction import run_extraction
 from .services.ingestion import fetch_arxiv, ingest_article_url, ingest_bibtex, ingest_doi, ingest_pdf_upload
-from .services.matcher import run_matching
+from .services.llm import check_llm_connection
+from .services.matcher import _provider_available, run_matching
 
 
 app = FastAPI(title="ReadSync", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,11 +81,17 @@ def startup():
 
 @app.get("/api/health")
 def health():
+    provider = setting_value("llm_provider", settings.llm_provider)
     return {
         "ok": True,
         "database": str(settings.sqlite_path),
-        "ollama_endpoint": settings.ollama_endpoint,
-        "ollama_model": settings.ollama_model,
+        "llm_provider": provider,
+        "llm_available": _provider_available(),
+        "ollama_endpoint": setting_value("ollama_endpoint", settings.ollama_endpoint),
+        "ollama_model": setting_value("ollama_model", settings.ollama_model),
+        "openrouter_base_url": setting_value("openrouter_base_url", settings.openrouter_base_url),
+        "openrouter_model": setting_value("openrouter_model", settings.openrouter_model),
+        "openrouter_key_configured": bool(settings.openrouter_api_key.strip()),
     }
 
 
@@ -383,12 +390,18 @@ def get_settings():
     return {row["key"]: row["value"] for row in rows}
 
 
+@app.post("/api/settings/check-llm")
+def settings_check_llm():
+    return check_llm_connection()
+
+
 @app.patch("/api/settings")
 def update_settings(request: SettingsRequest):
     updates = request.model_dump(exclude_none=True)
     with connect() as con:
         for key, value in updates.items():
             con.execute("INSERT INTO settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at", (key, value, utcnow()))
+    _provider_available.cache_clear()
     log_activity("settings", "Settings updated", ", ".join(updates.keys()))
     return {"ok": True}
 

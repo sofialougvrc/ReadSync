@@ -72,6 +72,7 @@ export const api = {
   graph: (confidence = 0) => request(`/api/graph?confidence=${confidence}`),
   timeline: () => request('/api/timeline'),
   settings: () => request('/api/settings'),
+  checkLlm: () => request('/api/settings/check-llm', { method: 'POST' }),
   updateSettings: (payload) => request('/api/settings', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ..config import settings
-from ..db import log_error
+from ..db import log_error, setting_value
 from ..schemas import PaperExtraction
 
 
@@ -437,7 +437,7 @@ def _fallback_extraction(title: str, raw_text: str) -> PaperExtraction:
 def extract_with_ollama(title: str, raw_text: str, paper_id: int | None = None) -> PaperExtraction:
     prompt = f"{SYSTEM_PROMPT}\n\nTITLE:\n{title}\n\nPAPER TEXT:\n{(raw_text or '')[:28000]}"
     payload = {
-        "model": settings.ollama_model,
+        "model": setting_value("ollama_model", settings.ollama_model),
         "prompt": prompt,
         "format": "json",
         "stream": False,
@@ -446,7 +446,7 @@ def extract_with_ollama(title: str, raw_text: str, paper_id: int | None = None) 
     for attempt in range(2):
         try:
             request = urllib.request.Request(
-                f"{settings.ollama_endpoint.rstrip('/')}/api/generate",
+                f"{setting_value('ollama_endpoint', settings.ollama_endpoint).rstrip('/')}/api/generate",
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
                 method="POST",
@@ -460,3 +460,98 @@ def extract_with_ollama(title: str, raw_text: str, paper_id: int | None = None) 
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValidationError, Exception) as exc:
             log_error("ollama_extraction", f"Attempt {attempt + 1}: {exc}", {"title": title}, paper_id)
     return _fallback_extraction(title, raw_text)
+
+
+def extract_with_openrouter(title: str, raw_text: str, paper_id: int | None = None) -> PaperExtraction:
+    api_key = settings.openrouter_api_key.strip()
+    if not api_key:
+        log_error("openrouter_extraction", "OPENROUTER_API_KEY is missing", {"title": title}, paper_id)
+        return _fallback_extraction(title, raw_text)
+
+    payload = {
+        "model": setting_value("openrouter_model", settings.openrouter_model),
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"TITLE:\n{title}\n\nPAPER TEXT:\n{(raw_text or '')[:28000]}"},
+        ],
+        "temperature": 0.1,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
+    if settings.openrouter_referer:
+        headers["HTTP-Referer"] = settings.openrouter_referer
+    if settings.openrouter_title:
+        headers["X-Title"] = settings.openrouter_title
+
+    for attempt in range(2):
+        try:
+            request = urllib.request.Request(
+                f"{setting_value('openrouter_base_url', settings.openrouter_base_url).rstrip('/')}/chat/completions",
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=90) as response:
+                body = json.loads(response.read().decode("utf-8"))
+            content = (((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+            data = _normalize_extraction_payload(_json_from_text(content), title)
+            if not data["concepts"] and not data["algorithms"] and len((raw_text or "").strip()) >= 180:
+                raise ValueError("OpenRouter returned valid JSON but no implementation concepts or algorithms.")
+            return PaperExtraction.model_validate(data)
+        except (json.JSONDecodeError, ValidationError, Exception) as exc:
+            log_error("openrouter_extraction", f"Attempt {attempt + 1}: {exc}", {"title": title}, paper_id)
+    return _fallback_extraction(title, raw_text)
+
+
+def extract_with_llm(title: str, raw_text: str, paper_id: int | None = None) -> PaperExtraction:
+    provider = setting_value("llm_provider", settings.llm_provider).strip().lower()
+    if provider == "openrouter":
+        return extract_with_openrouter(title, raw_text, paper_id)
+    return extract_with_ollama(title, raw_text, paper_id)
+
+
+def check_llm_connection() -> dict[str, Any]:
+    provider = setting_value("llm_provider", settings.llm_provider).strip().lower()
+    if provider == "openrouter":
+        api_key = settings.openrouter_api_key.strip()
+        if not api_key:
+            return {"ok": False, "provider": "openrouter", "detail": "OPENROUTER_API_KEY is missing."}
+        payload = {
+            "model": setting_value("openrouter_model", settings.openrouter_model),
+            "messages": [{"role": "user", "content": "Reply with OK."}],
+            "temperature": 0.0,
+            "max_tokens": 4,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        if settings.openrouter_referer:
+            headers["HTTP-Referer"] = settings.openrouter_referer
+        if settings.openrouter_title:
+            headers["X-Title"] = settings.openrouter_title
+        try:
+            request = urllib.request.Request(
+                f"{setting_value('openrouter_base_url', settings.openrouter_base_url).rstrip('/')}/chat/completions",
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=20) as response:
+                body = json.loads(response.read().decode("utf-8"))
+            content = (((body.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
+            return {"ok": True, "provider": "openrouter", "model": payload["model"], "detail": content or "OpenRouter request succeeded."}
+        except Exception as exc:
+            return {"ok": False, "provider": "openrouter", "model": payload["model"], "detail": str(exc)}
+
+    try:
+        endpoint = setting_value("ollama_endpoint", settings.ollama_endpoint).rstrip("/")
+        request = urllib.request.Request(f"{endpoint}/api/tags", method="GET")
+        with urllib.request.urlopen(request, timeout=5) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        models = [item.get("name", "") for item in body.get("models", [])][:10]
+        return {"ok": True, "provider": "ollama", "model": setting_value("ollama_model", settings.ollama_model), "detail": ", ".join(models) or "Ollama responded."}
+    except Exception as exc:
+        return {"ok": False, "provider": "ollama", "model": setting_value("ollama_model", settings.ollama_model), "detail": str(exc)}

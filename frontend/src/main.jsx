@@ -245,7 +245,7 @@ function PaperDetail({ paper, refresh }) {
         <button onClick={rerunMatching}>Run matching for this paper</button>
         {status && <span>{status}</span>}
       </div>
-      <Section title="Concepts">{paper.concepts.length ? paper.concepts.map(c => <PillCard key={c.id} title={c.name} meta={`${c.type_tag} · ${Math.round(c.confidence * 100)}%`} text={c.description} />) : <p className="muted">No extracted concepts yet. Re-run extraction after Ollama is running.</p>}</Section>
+      <Section title="Concepts">{paper.concepts.length ? paper.concepts.map(c => <PillCard key={c.id} title={c.name} meta={`${c.type_tag} · ${Math.round(c.confidence * 100)}%`} text={c.description} />) : <p className="muted">No extracted concepts yet. Re-run extraction after your configured LLM provider is available.</p>}</Section>
       <Section title="Algorithms">{paper.algorithms.length ? paper.algorithms.map(a => <PillCard key={a.id} title={a.name} meta={`${Math.round(a.confidence * 100)}%`} text={a.description} code={a.pseudocode} />) : <p className="muted">No algorithmic procedures extracted yet.</p>}</Section>
       <Section title="Patterns / Datasets / Metrics">{[...paper.code_patterns, ...paper.items].length ? [...paper.code_patterns, ...paper.items].map((item, idx) => <PillCard key={`${item.kind || 'pattern'}-${idx}`} title={item.name || item.label} meta={item.language || item.kind || 'pattern'} text={item.description || item.detail || ''} />) : <p className="muted">No datasets, metrics, limitations, citations, or code patterns extracted yet.</p>}</Section>
       <Section title="Matched Code">{paper.matches.length ? paper.matches.map(match => <MatchReview key={match.id} match={match} onDone={refresh} />) : <p className="muted">No matches yet. Index a repository in Code Explorer, then run matching for this paper.</p>}</Section>
@@ -429,13 +429,28 @@ function Settings() {
   const [form, setForm] = useState({})
   useEffect(() => setForm(data || {}), [data])
   async function save() {
-    await api.updateSettings({ ollama_endpoint: form.ollama_endpoint, ollama_model: form.ollama_model })
+    await api.updateSettings({
+      llm_provider: form.llm_provider,
+      ollama_endpoint: form.ollama_endpoint,
+      ollama_model: form.ollama_model,
+      openrouter_base_url: form.openrouter_base_url,
+      openrouter_model: form.openrouter_model,
+    })
     refresh()
   }
   async function clear() {
     if (confirm('Clear the local ReadSync database?')) await api.clearDatabase()
   }
   const [status, setStatus] = useState('')
+  async function checkProvider() {
+    setStatus('Checking LLM connection...')
+    try {
+      const result = await api.checkLlm()
+      setStatus(result.ok ? `Connected: ${result.provider} · ${result.model || ''} ${result.detail || ''}`.trim() : `Connection failed: ${result.detail}`)
+    } catch (error) {
+      setStatus(error.message)
+    }
+  }
   async function reindexEverything() {
     setStatus('Reindexing all repositories...')
     try {
@@ -447,10 +462,18 @@ function Settings() {
   }
   return (
     <div className="settings-grid">
+      <label>LLM provider
+        <select className="input" value={form.llm_provider || 'ollama'} onChange={e => setForm({ ...form, llm_provider: e.target.value })}>
+          <option value="ollama">Ollama (local)</option>
+          <option value="openrouter">OpenRouter (deployed)</option>
+        </select>
+      </label>
       <label>Ollama endpoint<input className="input" value={form.ollama_endpoint || ''} onChange={e => setForm({ ...form, ollama_endpoint: e.target.value })} /></label>
       <label>Ollama model<input className="input" value={form.ollama_model || ''} onChange={e => setForm({ ...form, ollama_model: e.target.value })} /></label>
-      <div className="action-row"><button onClick={save}>Save settings</button><button onClick={reindexEverything}>Trigger full reindex</button><button className="danger" onClick={clear}>Clear database</button>{status && <span>{status}</span>}</div>
-      <div className="panel"><strong>Local-first design</strong><p>ReadSync stores papers, code chunks, embeddings, and review decisions in SQLite on this machine. Ollama runs locally. No SaaS account is required.</p></div>
+      <label>OpenRouter base URL<input className="input" value={form.openrouter_base_url || ''} onChange={e => setForm({ ...form, openrouter_base_url: e.target.value })} /></label>
+      <label>OpenRouter model<input className="input" value={form.openrouter_model || ''} onChange={e => setForm({ ...form, openrouter_model: e.target.value })} /></label>
+      <div className="action-row"><button onClick={save}>Save settings</button><button onClick={checkProvider}>Check LLM connection</button><button onClick={reindexEverything}>Trigger full reindex</button><button className="danger" onClick={clear}>Clear database</button>{status && <span>{status}</span>}</div>
+      <div className="panel"><strong>Runtime modes</strong><p>Local ReadSync can stay fully offline with Ollama. For deployment, switch the provider to OpenRouter and keep the API key on the backend as an environment variable rather than storing it in the browser.</p></div>
     </div>
   )
 }

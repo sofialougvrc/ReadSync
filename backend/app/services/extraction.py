@@ -1,6 +1,6 @@
 from ..db import connect, dumps, log_activity, log_error, utcnow
 from .ingestion import BAD_CONTENT_MARKERS, MIN_EXTRACTED_TEXT_CHARS
-from .llm import extract_with_ollama
+from .llm import extract_with_llm
 
 
 def clear_existing_extraction(con, paper_id: int) -> None:
@@ -25,7 +25,7 @@ def run_extraction(paper_id: int) -> dict:
                 raise ValueError("Paper not found.")
             _assert_extractable_paper(dict(paper))
             con.execute("UPDATE papers SET status = 'extracting', updated_at = ? WHERE id = ?", (utcnow(), paper_id))
-        extraction = extract_with_ollama(paper["title"], paper["raw_text"], paper_id)
+        extraction = extract_with_llm(paper["title"], paper["raw_text"], paper_id)
         with connect() as con:
             clear_existing_extraction(con, paper_id)
             for item in extraction.concepts:

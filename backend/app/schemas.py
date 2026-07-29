@@ -59,5 +59,8 @@ class NoteRequest(BaseModel):
 
 
 class SettingsRequest(BaseModel):
+    llm_provider: Literal["ollama", "openrouter"] | None = None
     ollama_endpoint: str | None = None
     ollama_model: str | None = None
+    openrouter_base_url: str | None = None
+    openrouter_model: str | None = None

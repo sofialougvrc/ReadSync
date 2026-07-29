@@ -61,14 +61,28 @@ def init_db() -> None:
     schema_path = Path(__file__).with_name("schema.sql")
     with connect() as con:
         con.executescript(schema_path.read_text())
-        con.execute(
-            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("ollama_endpoint", settings.ollama_endpoint, utcnow()),
-        )
-        con.execute(
-            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("ollama_model", settings.ollama_model, utcnow()),
-        )
+        seeded = {
+            "llm_provider": settings.llm_provider,
+            "ollama_endpoint": settings.ollama_endpoint,
+            "ollama_model": settings.ollama_model,
+            "openrouter_base_url": settings.openrouter_base_url,
+            "openrouter_model": settings.openrouter_model,
+        }
+        for key, value in seeded.items():
+            con.execute(
+                "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+                (key, value, utcnow()),
+            )
+
+
+def setting_value(key: str, default: Any = "") -> Any:
+    try:
+        row = one("SELECT value FROM settings WHERE key = ?", (key,))
+        if row and row.get("value") not in (None, ""):
+            return row["value"]
+    except Exception:
+        pass
+    return default
 
 
 def log_activity(kind: str, title: str, detail: str = "", ref_type: str = "", ref_id: int | None = None) -> None:

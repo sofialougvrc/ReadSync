@@ -48,8 +48,8 @@ READSYNC_ALLOWED_REPO_ROOTS=
 
 Notes:
 
-- The Railway backend root should be `/backend`
-- Startup is already configured in [backend/railway.json](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/backend/railway.json) and [backend/Procfile](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/backend/Procfile)
+- Railway can now deploy directly from the **repo root**. Root-level [railway.json](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/railway.json), [Procfile](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/Procfile), and [requirements.txt](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/requirements.txt) forward the build into `backend/`.
+- If you prefer, you can still set the backend root to `/backend`, and Railway will use [backend/railway.json](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/backend/railway.json) and [backend/Procfile](/Users/sofiacardenasgarcia/Documents/Codex/ReadSync/backend/Procfile).
 - The OpenRouter key belongs only in Railway, never in the frontend
 - Railway's filesystem is ephemeral by default, so SQLite and FAISS need a persistent volume if you want deployed data to survive redeploys
 

@@ -1,10 +1,6 @@
 # ReadSync
-
-<<<<<<< HEAD
-A local research-to-code mapping system that connects academic reading to real implementation work. It ingests papers, arXiv links, DOI records, BibTeX sources, and technical articles, extracts implementation-facing concepts with a local LLM, indexes source repositories at function and class granularity, and proposes links between research ideas and code for review.
 =======
 ReadSync is a local research-to-code mapping system that connects academic reading to real implementation work. It ingests papers, arXiv links, DOI records, BibTeX sources, and technical articles, extracts implementation-facing concepts with a local LLM, indexes source repositories at function and class granularity, and proposes links between research ideas and code for review.
->>>>>>> 6213c6d (Separate local Ollama and deployed OpenRouter flows)
 
 The goal is not simply document search or repository search in isolation. ReadSync is designed to make the gap between what has been read and what has actually been built inspectable inside a single workspace.
 

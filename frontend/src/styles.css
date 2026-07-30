@@ -23,8 +23,8 @@
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; margin: 0; }
 body {
-  font-family: "Lucida Console", "Courier New", Monaco, monospace;
-  font-size: 15px;
+  font-family: Tahoma, "MS Sans Serif", "Segoe UI", sans-serif;
+  font-size: 14px;
   background: #ffffff;
   color: var(--ink);
 }
@@ -52,28 +52,33 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   left: 12px;
   top: 16px;
   display: grid;
-  gap: 12px;
-  width: 84px;
+  gap: 8px;
+  width: 72px;
   z-index: 2;
 }
 
 .desktop-icons button {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 3px;
   border: 1px solid transparent;
   background: transparent;
   color: #0d0d0d;
   text-shadow: 1px 1px rgba(255,255,255,.7);
-  padding: 5px;
+  padding: 4px 3px;
   cursor: pointer;
+  font-size: 11px;
+  line-height: 1.15;
 }
 .desktop-icons button:hover,
 .desktop-icons button.selected {
   border: 1px dotted #5b6880;
   background: rgba(198, 214, 235, .45);
 }
-.desktop-icons span { font-size: 28px; }
+.desktop-icons span {
+  font-size: 20px;
+  line-height: 1;
+}
 
 .win-window {
   width: min(1180px, calc(100vw - 150px));
@@ -159,24 +164,35 @@ button:active,
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34px;
+  height: 32px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px;
-  background: #e9d5df;
+  padding: 3px 4px;
+  background: linear-gradient(180deg, #e3e3e3, #cfcfcf);
   border-top: 2px solid #fff;
   z-index: 10;
 }
-.start { font-weight: 700; }
+.start {
+  font-weight: 700;
+  min-width: 86px;
+  background: linear-gradient(180deg, #3f9a54, #2e7f44);
+  color: #fff;
+  border-top: 1px solid #d8ffd9;
+  border-left: 1px solid #d8ffd9;
+  border-right: 1px solid #1b4e2a;
+  border-bottom: 1px solid #1b4e2a;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,.18);
+}
 .task,
 .clock {
-  border-top: 1px solid var(--chrome-dark);
-  border-left: 1px solid var(--chrome-dark);
+  border-top: 1px solid #7b7b7b;
+  border-left: 1px solid #7b7b7b;
   border-right: 1px solid #fff;
   border-bottom: 1px solid #fff;
-  padding: 4px 10px;
+  padding: 4px 10px 3px;
   color: #050505;
+  background: #dfdfdf;
 }
 .clock { margin-left: auto; }
 .clock.ok {
@@ -506,8 +522,8 @@ button:active,
     right: 10px;
     top: 8px;
   }
-  .desktop-icons button { font-size: 12px; }
-  .desktop-icons span { font-size: 20px; }
+  .desktop-icons button { font-size: 11px; }
+  .desktop-icons span { font-size: 18px; }
   .win-window { width: 100%; min-height: calc(100vh - 148px); }
   .grid-layout, .split, .code-grid { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }

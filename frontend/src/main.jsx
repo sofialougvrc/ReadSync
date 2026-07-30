@@ -365,19 +365,19 @@ function GraphPage() {
     svg.selectAll('*').remove()
     const nodes = data.nodes.map(d => ({ ...d }))
     const links = data.links.map(d => ({ ...d }))
-    const color = d => d.type === 'paper' ? '#4ea1ff' : d.type === 'concept' ? '#ffb14e' : '#5ce09b'
+    const color = d => d.type === 'paper' ? '#2b5ea1' : d.type === 'concept' ? '#6f93c4' : '#c7d8ef'
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(95))
       .force('charge', d3.forceManyBody().strength(-240))
       .force('center', d3.forceCenter(width / 2, height / 2))
-    const link = svg.append('g').attr('stroke', '#8f8f8f').attr('stroke-opacity', 0.55).selectAll('line').data(links).join('line').attr('stroke-width', d => 1 + d.confidence * 2)
+    const link = svg.append('g').attr('stroke', '#7391b8').attr('stroke-opacity', 0.72).selectAll('line').data(links).join('line').attr('stroke-width', d => 1 + d.confidence * 1.8)
     const node = svg.append('g').selectAll('g').data(nodes).join('g').call(d3.drag()
       .on('start', (event, d) => { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y })
       .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y })
       .on('end', (event, d) => { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null }))
-    node.append('circle').attr('r', d => d.type === 'paper' ? 13 : 9).attr('fill', color).attr('stroke', '#111').attr('stroke-width', 1.5)
+    node.append('circle').attr('r', d => d.type === 'paper' ? 13 : 9).attr('fill', color).attr('stroke', '#18365d').attr('stroke-width', 1.4)
     node.append('title').text(d => `${d.type}: ${d.label}`)
-    node.append('text').text(d => d.label.slice(0, 22)).attr('x', 13).attr('y', 4).attr('fill', '#fff').attr('font-size', 13)
+    node.append('text').text(d => d.label.slice(0, 22)).attr('x', 13).attr('y', 4).attr('fill', '#102645').attr('font-size', 12).attr('font-family', 'Tahoma, "MS Sans Serif", sans-serif')
     simulation.on('tick', () => {
       link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y)
       node.attr('transform', d => `translate(${d.x},${d.y})`)

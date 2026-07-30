@@ -4,16 +4,16 @@
 
 :root {
   color-scheme: light;
-  --desktop: #ffd6e7;
-  --desktop-deep: #f6aeca;
-  --chrome: #fffafd;
-  --chrome-light: #ffffff;
-  --chrome-mid: #f7d5e5;
-  --chrome-dark: #b9829f;
+  --desktop: #ffffff;
+  --desktop-deep: #fdfdfd;
+  --chrome: #ffe8f2;
+  --chrome-light: #fffdfd;
+  --chrome-mid: #f9d8e7;
+  --chrome-dark: #bb8aa1;
   --ink: #24111d;
-  --blue: #a84e82;
-  --blue2: #df88b4;
-  --paper: #ffffff;
+  --blue: #a74f82;
+  --blue2: #d68db0;
+  --paper: #fff7fb;
   --green: #287a46;
   --red: #9b1d4f;
   --yellow: #fff3a6;
@@ -25,7 +25,7 @@ html, body, #root { min-height: 100%; margin: 0; }
 body {
   font-family: Arial, "MS Sans Serif", system-ui, sans-serif;
   font-size: 15px;
-  background: #fff4fa;
+  background: #ffffff;
   color: var(--ink);
 }
 
@@ -39,10 +39,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   min-height: 100vh;
   padding: 22px 22px 44px 118px;
   background:
-    radial-gradient(circle at 78% 10%, rgba(255,255,255,.42), transparent 28%),
-    radial-gradient(circle at 14% 85%, rgba(168,78,130,.14), transparent 30%),
-    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(75,15,51,.07) 1px, rgba(75,15,51,.07) 2px),
-    repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,.12) 1px, rgba(255,255,255,.12) 2px),
+    radial-gradient(circle at 78% 10%, rgba(255, 226, 239, .45), transparent 26%),
+    radial-gradient(circle at 14% 85%, rgba(214, 141, 176, .14), transparent 28%),
+    repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(176, 136, 158, .08) 23px, rgba(176, 136, 158, .08) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(176, 136, 158, .08) 23px, rgba(176, 136, 158, .08) 24px),
     linear-gradient(135deg, var(--desktop), var(--desktop-deep));
   color: var(--ink);
 }
@@ -63,15 +63,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   gap: 4px;
   border: 1px solid transparent;
   background: transparent;
-  color: white;
-  text-shadow: 1px 1px #7b235c;
+  color: #5f2847;
+  text-shadow: 1px 1px rgba(255,255,255,.85);
   padding: 5px;
   cursor: pointer;
 }
 .desktop-icons button:hover,
 .desktop-icons button.selected {
-  border: 1px dotted #fff;
-  background: rgba(168,78,130,.26);
+  border: 1px dotted #9f6481;
+  background: rgba(224, 182, 204, .42);
 }
 .desktop-icons span { font-size: 28px; }
 
@@ -83,7 +83,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   border-left: 2px solid var(--chrome-light);
   border-right: 2px solid var(--chrome-dark);
   border-bottom: 2px solid var(--chrome-dark);
-  box-shadow: 3px 3px 0 rgba(74, 17, 55, .75);
+  box-shadow: 3px 3px 0 rgba(101, 58, 80, .45);
 }
 
 .win-titlebar {
@@ -91,7 +91,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(90deg, #f9bdd8, #f4d5e5 58%, #fff7fb);
+  background: linear-gradient(90deg, #eba8c8, #f5cfe0 55%, #fff6fa);
   color: #4a1738;
   padding: 3px 5px;
 }
@@ -143,7 +143,7 @@ button:active,
   padding: 2px 8px;
 }
 .win-menubar span:hover {
-  background: #ffe5f1;
+  background: #ffddec;
   color: #4a1738;
 }
 .win-content {
@@ -162,7 +162,7 @@ button:active,
   align-items: center;
   gap: 6px;
   padding: 4px;
-  background: var(--chrome);
+  background: #f6d6e4;
   border-top: 2px solid #fff;
   z-index: 10;
 }
@@ -216,7 +216,7 @@ button:active,
   color: var(--blue);
 }
 .helper-card {
-  background: #fff;
+  background: #fff9fc;
   border-top: 1px solid var(--chrome-dark);
   border-left: 1px solid var(--chrome-dark);
   border-right: 1px solid #fff;
@@ -242,7 +242,7 @@ button:active,
 }
 .activity-list p,
 .match-line {
-  border-bottom: 1px solid #efc4da;
+  border-bottom: 1px solid #e8bfd2;
   padding: 7px 0;
 }
 .activity-list span {
@@ -270,7 +270,7 @@ button:active,
 .input,
 .textarea {
   width: 100%;
-  background: white;
+  background: #fffdfd;
   color: #24111d;
   border-top: 2px solid var(--chrome-dark);
   border-left: 2px solid var(--chrome-dark);
@@ -288,11 +288,11 @@ button:active,
   gap: 8px;
   min-height: 230px;
   border: 2px dashed var(--chrome-dark);
-  background: white;
+  background: #fffdfd;
   cursor: pointer;
 }
 .dropzone.drag {
-  background: #fff1f8;
+  background: #ffeef7;
   border-color: var(--blue);
 }
 .dropzone input { display: none; }
@@ -304,7 +304,7 @@ button:active,
   margin: 10px 0;
 }
 .danger {
-  background: #b8376f;
+  background: #b84a79;
   color: #fff;
   border-color: #ffd7e9 #ffd7e9 #6d143d #6d143d;
 }
@@ -347,7 +347,7 @@ button:active,
   gap: 2px;
   max-height: 570px;
   overflow: auto;
-  background: white;
+  background: #fffdfd;
   border-top: 2px solid var(--chrome-dark);
   border-left: 2px solid var(--chrome-dark);
   border-right: 2px solid #fff;
@@ -366,7 +366,7 @@ button:active,
 }
 .listbox button:hover,
 .listbox button.selected {
-  background: var(--blue);
+  background: #c86d99;
   color: white;
 }
 .listbox span {
@@ -399,15 +399,15 @@ button:active,
 }
 .pill-card pre,
 .source-view {
-  background: #20111d;
-  color: #ffe7f3;
+  background: #2a1824;
+  color: #ffedf6;
   padding: 10px;
   overflow: auto;
   white-space: pre-wrap;
 }
 .match-card code {
   display: block;
-  background: #fff;
+  background: #fffdfd;
   border: 1px solid #d8a7c0;
   padding: 6px;
   color: #5e1649;
@@ -452,8 +452,8 @@ button:active,
 .graph-canvas {
   min-height: 520px;
   background:
-    radial-gradient(circle at 30% 20%, rgba(255, 207, 231, .2), transparent 28%),
-    #20111d;
+    radial-gradient(circle at 30% 20%, rgba(255, 207, 231, .16), transparent 28%),
+    #fffafc;
   border-top: 2px solid var(--chrome-dark);
   border-left: 2px solid var(--chrome-dark);
   border-right: 2px solid #fff;
@@ -485,7 +485,7 @@ button:active,
   display: grid;
   place-items: center;
   min-height: 180px;
-  background: white;
+  background: #fffdfd;
   color: #694157;
   border: 2px inset #d39abb;
   padding: 18px;
